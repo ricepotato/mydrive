@@ -53,6 +53,7 @@ export default function Home() {
           `/api/files?prefix=${encodeURIComponent(prefix)}`
         );
         const data = await response.json();
+        console.log(data);
         if (data.files) {
           setFiles(data.files);
         }
