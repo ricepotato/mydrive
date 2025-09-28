@@ -3,10 +3,7 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, Check, X, AlertCircle } from "lucide-react";
-
-interface FileUploadProps {
-  onUpload?: () => void;
-}
+import { uploadFile } from "@/actions/actions";
 
 interface UploadStatus {
   [key: string]: {
@@ -24,7 +21,7 @@ export function FileUploadContainer() {
   );
 }
 
-export function FileUpload({ onUpload }: FileUploadProps) {
+export function FileUpload({ onUpload }: { onUpload?: () => void }) {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({});
 
@@ -47,31 +44,21 @@ export function FileUpload({ onUpload }: FileUploadProps) {
 
           console.log(`파일 업로드 시작: ${file.name}`);
 
-          const response = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-          });
-
-          const data = await response.json();
-
-          if (response.ok && data.success) {
+          const result = await uploadFile(formData);
+          if (result.success) {
             setUploadStatus((prev) => ({
               ...prev,
               [file.name]: { progress: 100, status: "success" },
             }));
-            console.log(`파일 업로드 성공: ${file.name}`);
           } else {
-            const errorMessage =
-              data.error || data.details || "알 수 없는 오류";
             setUploadStatus((prev) => ({
               ...prev,
               [file.name]: {
                 progress: 0,
                 status: "error",
-                error: errorMessage,
+                error: "업로드 실패",
               },
             }));
-            console.error(`파일 업로드 실패: ${file.name}`, data);
           }
         } catch (error) {
           const errorMessage =
