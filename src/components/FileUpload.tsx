@@ -21,70 +21,50 @@ export function FileUploadContainer() {
   );
 }
 
-export function FileUpload({ onUpload }: { onUpload?: () => void }) {
+export function FileUpload() {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({});
 
-  const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
-      setUploading(true);
-      setUploadStatus({});
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    setUploading(true);
+    setUploadStatus({});
 
-      // 초기 상태 설정
-      const initialStatus: UploadStatus = {};
-      acceptedFiles.forEach((file) => {
-        initialStatus[file.name] = { progress: 0, status: "uploading" };
-      });
-      setUploadStatus(initialStatus);
+    // 초기 상태 설정
+    const initialStatus: UploadStatus = {};
+    acceptedFiles.forEach((file) => {
+      initialStatus[file.name] = { progress: 0, status: "uploading" };
+    });
+    setUploadStatus(initialStatus);
 
-      for (const file of acceptedFiles) {
-        try {
-          const formData = new FormData();
-          formData.append("file", file);
+    const uploadFile2 = async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
 
-          console.log(`파일 업로드 시작: ${file.name}`);
+      console.log(`파일 업로드 시작: ${file.name}`);
+      const result = await uploadFile(formData);
+      return result;
+    };
 
-          const result = await uploadFile(formData);
-          if (result.success) {
-            setUploadStatus((prev) => ({
-              ...prev,
-              [file.name]: { progress: 100, status: "success" },
-            }));
-          } else {
-            setUploadStatus((prev) => ({
-              ...prev,
-              [file.name]: {
-                progress: 0,
-                status: "error",
-                error: "업로드 실패",
-              },
-            }));
-          }
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "네트워크 오류";
-          setUploadStatus((prev) => ({
-            ...prev,
-            [file.name]: {
-              progress: 0,
-              status: "error",
-              error: errorMessage,
-            },
-          }));
-          console.error(`파일 업로드 중 오류: ${file.name}`, error);
-        }
+    const uploadResults = await Promise.all(
+      acceptedFiles.map((file) => uploadFile2(file))
+    );
+
+    uploadResults.forEach((result) => {
+      if (result.success) {
+        setUploadStatus((prev) => ({
+          ...prev,
+          [result.fileName]: { progress: 100, status: "success" },
+        }));
       }
+    });
 
-      setUploading(false);
-      onUpload?.();
+    setUploading(false);
 
-      // 5초 후 상태 초기화
-      setTimeout(() => {
-        setUploadStatus({});
-      }, 5000);
-    },
-    [onUpload]
-  );
+    // 5초 후 상태 초기화
+    setTimeout(() => {
+      setUploadStatus({});
+    }, 5000);
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

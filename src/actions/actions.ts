@@ -45,9 +45,9 @@ export async function uploadFile(formData: FormData) {
     );
 
     revalidatePath("/drive");
-    return { success: true };
+    return { success: true, fileName: file.name };
   } catch (error) {
     console.error("파일 업로드 오류:", error);
-    return { success: false };
+    return { success: false, fileName: file.name };
   }
 }
