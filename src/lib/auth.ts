@@ -22,9 +22,16 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
+    async redirect({ url, baseUrl }) {
+      // 로그인 후 홈페이지로 리다이렉트
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/`;
+      }
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
   },
   pages: {
-    signIn: "/auth/signin",
+    signIn: "/login",
   },
   session: {
     strategy: "jwt",
