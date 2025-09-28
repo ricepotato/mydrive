@@ -7,7 +7,8 @@ import {
   Video, 
   Download, 
   Trash2, 
-  Eye
+  Eye,
+  Folder
 } from "lucide-react";
 
 interface FileItem {
@@ -17,6 +18,7 @@ interface FileItem {
   lastModified: string;
   previewUrl: string | null;
   isPreviewable: boolean;
+  isFolder?: boolean;
 }
 
 interface FileListProps {
@@ -24,10 +26,29 @@ interface FileListProps {
   onFileClick: (file: FileItem) => void;
   onFileDelete: (key: string) => void;
   formatFileSize: (bytes: number) => string;
+  onDragStart: (file: FileItem) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, targetFolder?: string) => void;
+  onDragEnd: () => void;
+  draggedItem: FileItem | null;
 }
 
-export function FileList({ files, onFileClick, onFileDelete, formatFileSize }: FileListProps) {
-  const getFileIcon = (fileName: string) => {
+export function FileList({ 
+  files, 
+  onFileClick, 
+  onFileDelete, 
+  formatFileSize, 
+  onDragStart, 
+  onDragOver, 
+  onDrop, 
+  onDragEnd, 
+  draggedItem 
+}: FileListProps) {
+  const getFileIcon = (fileName: string, isFolder?: boolean) => {
+    if (isFolder) {
+      return <Folder className="w-5 h-5 text-yellow-500" />;
+    }
+    
     const extension = fileName.toLowerCase().split(".").pop();
     
     if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || "")) {
@@ -71,28 +92,43 @@ export function FileList({ files, onFileClick, onFileDelete, formatFileSize }: F
 
   return (
     <div className="divide-y divide-gray-200">
-      {files.map((file) => (
-        <div
-          key={file.key}
-          className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-        >
+      {files.map((file) => {
+        const isDragging = draggedItem?.key === file.key;
+        const isDropTarget = file.isFolder && draggedItem && draggedItem.key !== file.key;
+        
+        return (
+          <div
+            key={file.key}
+            className={`flex items-center justify-between p-4 transition-colors ${
+              isDragging 
+                ? "opacity-50 bg-blue-50" 
+                : isDropTarget 
+                  ? "bg-blue-50 border-2 border-blue-300 border-dashed" 
+                  : "hover:bg-gray-50"
+            }`}
+            draggable
+            onDragStart={() => onDragStart(file)}
+            onDragOver={onDragOver}
+            onDrop={(e) => onDrop(e, file.isFolder ? file.fileName : undefined)}
+            onDragEnd={onDragEnd}
+          >
           <div 
             className="flex items-center gap-3 flex-1 cursor-pointer"
             onClick={() => onFileClick(file)}
           >
-            {getFileIcon(file.fileName)}
+            {getFileIcon(file.fileName, file.isFolder)}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
                 {file.fileName}
               </p>
               <p className="text-xs text-gray-500">
-                {formatFileSize(file.size)} • {formatDate(file.lastModified)}
+                {file.isFolder ? "폴더" : formatFileSize(file.size)} • {formatDate(file.lastModified)}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {file.isPreviewable && (
+            {file.isPreviewable && !file.isFolder && (
               <button
                 onClick={() => onFileClick(file)}
                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -102,13 +138,15 @@ export function FileList({ files, onFileClick, onFileDelete, formatFileSize }: F
               </button>
             )}
             
-            <button
-              onClick={() => handleDownload(file.key, file.fileName)}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              title="다운로드"
-            >
-              <Download className="w-4 h-4" />
-            </button>
+            {!file.isFolder && (
+              <button
+                onClick={() => handleDownload(file.key, file.fileName)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                title="다운로드"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+            )}
             
             <button
               onClick={() => onFileDelete(file.key)}
@@ -118,8 +156,9 @@ export function FileList({ files, onFileClick, onFileDelete, formatFileSize }: F
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 } 

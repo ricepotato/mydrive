@@ -32,9 +32,11 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(`/api/download/${encodeURIComponent(file.key)}`);
+      const response = await fetch(
+        `/api/download/${encodeURIComponent(file.key)}`
+      );
       const data = await response.json();
-      
+
       if (data.downloadUrl) {
         const link = document.createElement("a");
         link.href = data.downloadUrl;
@@ -50,11 +52,15 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
 
   const getFileType = (fileName: string) => {
     const extension = fileName.toLowerCase().split(".").pop();
-    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || "")) {
+    if (
+      ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || "")
+    ) {
       return "image";
     } else if (extension === "pdf") {
       return "pdf";
-    } else if (["mp4", "avi", "mov", "wmv", "flv", "webm"].includes(extension || "")) {
+    } else if (
+      ["mp4", "avi", "mov", "wmv", "flv", "webm"].includes(extension || "")
+    ) {
       return "video";
     }
     return "unknown";
@@ -67,9 +73,9 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
       case "image":
         return (
           <img
+            className="max-h-full max-w-full object-contain"
             src={file.previewUrl || ""}
             alt={file.fileName}
-            className="max-w-full max-h-full object-contain"
             onLoad={() => setLoading(false)}
             onError={() => setLoading(false)}
           />
@@ -79,7 +85,11 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
           <video
             src={file.previewUrl || ""}
             controls
-            className="max-w-full max-h-full"
+            className="max-w-full max-h-full object-contain"
+            style={{
+              maxHeight: "calc(100vh - 200px)",
+              maxWidth: "calc(100vw - 100px)",
+            }}
             onLoadedData={() => setLoading(false)}
             onError={() => setLoading(false)}
           >
@@ -91,6 +101,7 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
           <iframe
             src={file.previewUrl || ""}
             className="w-full h-full border-0"
+            style={{ maxHeight: "calc(100vh - 200px)" }}
             onLoad={() => setLoading(false)}
             onError={() => setLoading(false)}
           />
@@ -98,7 +109,9 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
       default:
         return (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">미리보기를 지원하지 않는 파일 형식입니다.</p>
+            <p className="text-gray-500">
+              미리보기를 지원하지 않는 파일 형식입니다.
+            </p>
           </div>
         );
     }
@@ -106,13 +119,17 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className={`bg-white rounded-lg shadow-xl ${isFullscreen ? 'w-full h-full' : 'w-11/12 h-5/6 max-w-6xl'}`}>
+      <div
+        className={`flex flex-col bg-white rounded-lg shadow-xl ${
+          isFullscreen ? "w-full h-full" : "w-11/12 h-5/6 max-w-6xl"
+        }`}
+      >
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="text-lg font-medium text-gray-900 truncate">
             {file.fileName}
           </h3>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
@@ -121,7 +138,7 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
             >
               <Download className="w-4 h-4" />
             </button>
-            
+
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -133,7 +150,7 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
                 <Maximize2 className="w-4 h-4" />
               )}
             </button>
-            
+
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -145,18 +162,18 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
         </div>
 
         {/* 컨텐츠 */}
-        <div className="relative flex-1 p-4">
+        <div className="relative flex-1 p-4 overflow-hidden">
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center bg-white">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           )}
-          
-          <div className="w-full h-full flex items-center justify-center">
+
+          <div className="flex items-center justify-center h-full w-full">
             {renderPreview()}
           </div>
         </div>
       </div>
     </div>
   );
-} 
+}

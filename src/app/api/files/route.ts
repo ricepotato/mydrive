@@ -31,6 +31,24 @@ export async function GET(request: NextRequest) {
       response.Contents.map(async (object) => {
         const key = object.Key!;
         const fileName = key.split("/").pop() || "";
+        
+        // 폴더 마커 파일인지 확인
+        const isFolder = fileName === ".folder";
+        
+        if (isFolder) {
+          // 폴더의 경우 상위 디렉토리 이름을 사용
+          const folderName = key.split("/").slice(-2, -1)[0] || "";
+          return {
+            key,
+            fileName: folderName,
+            size: 0,
+            lastModified: object.LastModified,
+            previewUrl: null,
+            isPreviewable: false,
+            isFolder: true,
+          };
+        }
+
         const originalName = fileName.includes("-") 
           ? fileName.substring(fileName.indexOf("-") + 1)
           : fileName;
@@ -55,6 +73,7 @@ export async function GET(request: NextRequest) {
           lastModified: object.LastModified,
           previewUrl,
           isPreviewable,
+          isFolder: false,
         };
       })
     );
