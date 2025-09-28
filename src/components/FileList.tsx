@@ -155,7 +155,7 @@ export function FileList({
               {!file.isFolder && (
                 <button
                   onClick={() => handleDownload?.(file.key, file.fileName)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                   title="다운로드"
                 >
                   <Download className="w-4 h-4" />
@@ -164,7 +164,7 @@ export function FileList({
 
               <button
                 onClick={() => onFileDelete?.(file.key)}
-                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                className="p-2 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
                 title="삭제"
               >
                 <Trash2 className="w-4 h-4" />
