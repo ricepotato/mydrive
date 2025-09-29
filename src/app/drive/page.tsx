@@ -1,5 +1,5 @@
 import { CreateFolderButtonContainer } from "@/components/CreateFolder";
-import { FileList } from "@/components/FileList";
+import { FileListView } from "@/components/FileList";
 import { FileUploadContainer } from "@/components/FileUpload";
 import { Header as HeaderComponent } from "@/components/Header";
 import { authOptions } from "@/lib/auth";
@@ -14,7 +14,6 @@ export default async function Page({
   searchParams: { path: string };
 }) {
   const { path } = await searchParams;
-  console.log(path);
   return (
     <>
       <Suspense>
@@ -24,9 +23,7 @@ export default async function Page({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FileUploadContainer />
           <CreateFolderButtonContainer />
-          <Suspense>
-            <FileListContainer path={path} />
-          </Suspense>
+          <FileListContainer path={path} />
         </div>
       </main>
     </>
@@ -41,10 +38,8 @@ async function Header() {
 async function FileListContainer({ path }: { path?: string }) {
   const session = await getSession();
   const prefix = `${session.user.id}/${path ? `${path}/` : ""}`;
-  console.log(`prefix: ${prefix}`);
   const files = await getFiles(prefix);
-  console.log(`files: ${files}`);
-  return <FileList files={files} />;
+  return <FileListView files={files} />;
 }
 
 async function getSession() {

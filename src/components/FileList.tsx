@@ -1,42 +1,97 @@
 "use client";
 
+import { moveFileAction } from "@/actions/actions";
 import { FileItem } from "@/lib/r2";
+import { useState } from "react";
 
 import {
-  File,
-  Image,
-  FileText,
-  Video,
   Download,
-  Trash2,
   Eye,
+  File,
+  FileText,
   Folder,
+  Image,
+  Trash2,
+  Video,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-interface FileListProps {
-  files: FileItem[];
-  onFileClick?: (file: FileItem) => void;
-  onFileDelete?: (key: string) => void;
-  formatFileSize?: (bytes: number) => string;
-  onDragStart?: (file: FileItem) => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent, targetFolder?: string) => void;
-  onDragEnd?: () => void;
-  draggedItem?: FileItem | null;
+export function FileListView({ files }: { files: FileItem[] }) {
+  const [draggedItem, setDraggedItem] = useState<FileItem | undefined>();
+
+  const handleDragStart = (file: FileItem) => {
+    console.log(`handleDragStart ${file}`);
+    setDraggedItem(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    console.log(`handleDragOver ${e}`);
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetFolder?: string) => {
+    e.preventDefault();
+
+    if (!draggedItem) return;
+
+    // 같은 폴더로 드롭하는 경우 무시
+    if (targetFolder === draggedItem.fileName && draggedItem.isFolder) {
+      setDraggedItem(undefined);
+      return;
+    }
+
+    // 폴더를 자신의 하위 폴더로 드롭하는 경우 방지
+    if (draggedItem.isFolder && targetFolder) {
+      const draggedPath = `${draggedItem.fileName}/`;
+      if (targetFolder.startsWith(draggedPath)) {
+        alert("폴더를 자신의 하위 폴더로 이동할 수 없습니다.");
+        setDraggedItem(undefined);
+        return;
+      }
+    }
+
+    // 파일 드레그시
+    if (targetFolder && draggedItem.isFolder === false) {
+      const result = await moveFileAction(targetFolder, draggedItem);
+      if (result.success) {
+        setDraggedItem(undefined);
+      }
+    }
+  };
+
+  return (
+    <FileList55
+      files={files}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDragEnd={() => {
+        setDraggedItem(undefined);
+      }}
+      draggedItem={draggedItem}
+    />
+  );
 }
 
-export function FileList({
+export function FileList55({
   files,
   onFileClick,
   onFileDelete,
-  formatFileSize,
   onDragStart,
   onDragOver,
   onDrop,
   onDragEnd,
   draggedItem,
-}: FileListProps) {
+}: {
+  files: FileItem[];
+  onFileClick?: (file: FileItem) => void;
+  onFileDelete?: (key: string) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, targetFolder?: string) => void;
+  onDragEnd: () => void;
+  draggedItem?: FileItem | null;
+  onDragStart: (file: FileItem) => void;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -109,7 +164,11 @@ export function FileList({
                 : "hover:bg-gray-50"
             }`}
             draggable
-            onDragStart={() => onDragStart?.(file)}
+            onDragStart={() => {
+              console.log(`onDragStart`);
+              console.log(file);
+              onDragStart(file);
+            }}
             onDragOver={onDragOver}
             onDrop={(e) =>
               onDrop?.(e, file.isFolder ? file.fileName : undefined)
@@ -176,3 +235,11 @@ export function FileList({
     </div>
   );
 }
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};

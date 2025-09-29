@@ -36,17 +36,16 @@ export function FileUpload() {
     });
     setUploadStatus(initialStatus);
 
-    const uploadFile2 = async (file: File) => {
+    const submitUploadForm = async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
 
       console.log(`파일 업로드 시작: ${file.name}`);
-      const result = await uploadFile(formData);
-      return result;
+      return await uploadFile(formData);
     };
 
     const uploadResults = await Promise.all(
-      acceptedFiles.map((file) => uploadFile2(file))
+      acceptedFiles.map((file) => submitUploadForm(file))
     );
 
     uploadResults.forEach((result) => {

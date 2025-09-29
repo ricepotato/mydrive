@@ -1,5 +1,11 @@
-import { S3Client } from "@aws-sdk/client-s3";
-import { ListObjectsV2Command } from "@aws-sdk/client-s3";
+import {
+  _Object,
+  CommonPrefix,
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+  S3Client,
+} from "@aws-sdk/client-s3";
 
 export interface FileItem {
   key: string;
@@ -62,43 +68,69 @@ export async function getFiles(prefix: string): Promise<FileItem[]> {
     Prefix: prefix,
     Delimiter: "/",
   });
-
   const response = await r2Client.send(command);
 
-  if (!response.Contents) {
-    return [];
-  }
+  const getFiles = (contents: _Object[] | undefined) => {
+    if (!contents) {
+      return [];
+    }
+    const files = contents.map((object) => {
+      const key = object.Key!;
+      const fileName = key.split("/").pop() || "";
 
-  console.log(response.CommonPrefixes);
+      const originalName = fileName.includes("-")
+        ? fileName.substring(fileName.indexOf("-") + 1)
+        : fileName;
 
-  const directories =
-    response.CommonPrefixes?.map((item) => {
-      const cleanPrefix = item.Prefix!.replace(/\/$/, ""); // 마지막 / 제거
       return {
-        key: cleanPrefix,
-        fileName: cleanPrefix.replace(prefix, ""),
-        size: 0,
-        isFolder: true,
+        key,
+        fileName: originalName,
+        size: object.Size || 0,
+        lastModified: object.LastModified,
+        isFolder: false,
       };
-    }) || [];
+    });
+    return files;
+  };
+  const getDirectories = (commonPrefixes: CommonPrefix[] | undefined) => {
+    if (!commonPrefixes) {
+      return [];
+    }
+    const directories =
+      commonPrefixes.map((item) => {
+        const cleanPrefix = item.Prefix!.replace(/\/$/, ""); // 마지막 / 제거
+        return {
+          key: cleanPrefix,
+          fileName: cleanPrefix.replace(prefix, ""),
+          size: 0,
+          isFolder: true,
+        };
+      }) || [];
+    return directories;
+  };
 
-  const files = response.Contents.map((object) => {
-    const key = object.Key!;
-    const fileName = key.split("/").pop() || "";
-
-    const originalName = fileName.includes("-")
-      ? fileName.substring(fileName.indexOf("-") + 1)
-      : fileName;
-
-    return {
-      key,
-      fileName: originalName,
-      size: object.Size || 0,
-      lastModified: object.LastModified,
-      isFolder: false,
-    };
-  });
+  const files = getFiles(response.Contents);
+  const directories = getDirectories(response.CommonPrefixes);
 
   const onlyFiles = files.filter((file) => file.fileName !== ".folder");
   return [...directories, ...onlyFiles];
+}
+
+export async function moveFile(sourceKey: string, destinationKey: string) {
+  const command = new CopyObjectCommand({
+    Bucket: BUCKET_NAME,
+    CopySource: `${BUCKET_NAME}/${sourceKey}`,
+    Key: destinationKey,
+  });
+  const copyResponse = await r2Client.send(command);
+  console.log(copyResponse);
+
+  const deleteCommand = new DeleteObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: sourceKey,
+  });
+  const deleteResponse = await r2Client.send(deleteCommand);
+  console.log(deleteResponse);
+
+  return true;
 }
