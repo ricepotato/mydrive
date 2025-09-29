@@ -1,5 +1,6 @@
 "use client";
 
+import { createFolderAction } from "@/actions/actions";
 import { FolderPlus } from "lucide-react";
 import { useState } from "react";
 
@@ -53,6 +54,7 @@ export function CreateFolderButtonContainer() {
               </button>
               <button
                 onClick={() => {
+                  createFolderAction(folderName);
                   setShowCreateFolder(false);
                   setFolderName("");
                 }}

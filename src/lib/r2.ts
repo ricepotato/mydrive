@@ -4,6 +4,7 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   ListObjectsV2Command,
+  PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 
@@ -132,5 +133,41 @@ export async function moveFile(sourceKey: string, destinationKey: string) {
   const deleteResponse = await r2Client.send(deleteCommand);
   console.log(deleteResponse);
 
+  return true;
+}
+
+export async function createFolder(key: string) {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Body: "",
+    ContentType: "application/x-directory",
+  });
+  const response = await r2Client.send(command);
+  console.log(response);
+  return true;
+}
+
+export async function deleteFile(key: string) {
+  const command = new DeleteObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+  });
+  const response = await r2Client.send(command);
+  console.log(response);
+
+  if (response.$metadata.httpStatusCode !== 204) {
+    return false;
+  }
+
+  return true;
+}
+
+export async function deleteFolderRecursive(prefix: string) {
+  const result = await getFiles(prefix);
+  const files = result.filter((file) => file.isFolder === false);
+  const folders = result.filter((file) => file.isFolder === true);
+  await Promise.all(files.map((file) => deleteFile(file.key)));
+  await Promise.all(folders.map((folder) => deleteFolderRecursive(folder.key)));
   return true;
 }
