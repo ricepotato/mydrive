@@ -64,6 +64,7 @@ export async function testR2Connection() {
 }
 
 export async function getFiles(prefix: string): Promise<FileItem[]> {
+  console.log("getFiles", prefix);
   const command = new ListObjectsV2Command({
     Bucket: BUCKET_NAME,
     Prefix: prefix,
@@ -149,25 +150,30 @@ export async function createFolder(key: string) {
 }
 
 export async function deleteFile(key: string) {
+  console.log("deleteFile", key);
   const command = new DeleteObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
   });
   const response = await r2Client.send(command);
-  console.log(response);
 
   if (response.$metadata.httpStatusCode !== 204) {
+    console.warn("deleteFile failed", key);
     return false;
   }
 
+  console.debug("deleteFile success", key);
   return true;
 }
 
 export async function deleteFolderRecursive(prefix: string) {
-  const result = await getFiles(prefix);
+  console.log("deleteFolderRecursive", prefix);
+  const result = await getFiles(`${prefix}/`);
   const files = result.filter((file) => file.isFolder === false);
+  console.log("deleteFolderRecursive files", files);
   const folders = result.filter((file) => file.isFolder === true);
   await Promise.all(files.map((file) => deleteFile(file.key)));
   await Promise.all(folders.map((folder) => deleteFolderRecursive(folder.key)));
+  await deleteFile(`${prefix}/.folder`);
   return true;
 }

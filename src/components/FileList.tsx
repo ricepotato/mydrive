@@ -1,6 +1,10 @@
 "use client";
 
-import { moveFileAction } from "@/actions/actions";
+import {
+  deleteFileAction,
+  deleteFolderAction,
+  moveFileAction,
+} from "@/actions/actions";
 import { FileItem } from "@/lib/r2";
 import { useState } from "react";
 
@@ -180,7 +184,11 @@ export function FileList55({
               onClick={() => {
                 if (file.isFolder) {
                   const querySearchParams = new URLSearchParams(searchParams);
-                  querySearchParams.set("path", file.fileName);
+                  const currentPath = querySearchParams.get("path");
+                  const newPath = currentPath
+                    ? `${currentPath}/${file.fileName}`
+                    : file.fileName;
+                  querySearchParams.set("path", newPath);
                   router.push(`${pathname}?${querySearchParams.toString()}`);
                 }
               }}
@@ -222,7 +230,19 @@ export function FileList55({
               )}
 
               <button
-                onClick={() => onFileDelete?.(file.key)}
+                onClick={() => {
+                  if (
+                    file.isFolder &&
+                    confirm(`${file.fileName} 폴더를 정말 삭제하시겠습니까?`)
+                  ) {
+                    deleteFolderAction(file.key);
+                  } else if (
+                    file.isFolder === false &&
+                    confirm(`${file.fileName} 파일을 정말 삭제하시겠습니까?`)
+                  ) {
+                    deleteFileAction(file.key);
+                  }
+                }}
                 className="p-2 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
                 title="삭제"
               >

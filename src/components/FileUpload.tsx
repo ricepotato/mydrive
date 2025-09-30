@@ -3,7 +3,8 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, Check, X, AlertCircle } from "lucide-react";
-import { uploadFile } from "@/actions/actions";
+import { uploadFileAction } from "@/actions/actions";
+import { useSearchParams } from "next/navigation";
 
 interface UploadStatus {
   [key: string]: {
@@ -22,6 +23,7 @@ export function FileUploadContainer() {
 }
 
 export function FileUpload() {
+  const searchParams = useSearchParams();
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({});
 
@@ -39,9 +41,10 @@ export function FileUpload() {
     const submitUploadForm = async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("path", searchParams.get("path") || "");
 
       console.log(`파일 업로드 시작: ${file.name}`);
-      return await uploadFile(formData);
+      return await uploadFileAction(formData);
     };
 
     const uploadResults = await Promise.all(

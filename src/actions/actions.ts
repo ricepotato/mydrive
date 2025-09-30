@@ -7,16 +7,23 @@ import {
   r2Client,
   moveFile,
   createFolder,
+  deleteFolderRecursive,
+  deleteFile,
 } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  getSignedUrl,
+  S3RequestPresigner,
+} from "@aws-sdk/s3-request-presigner";
 
-export async function uploadFile(formData: FormData) {
+export async function uploadFileAction(formData: FormData) {
   let file: File | undefined = undefined;
   try {
     const session = await getSession();
+    const path = formData.get("path") as string;
 
     file = formData.get("file") as File;
     console.debug("업로드 시작:", {
@@ -27,7 +34,12 @@ export async function uploadFile(formData: FormData) {
     });
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const key = `${session.user.id}/${Date.now()}-${file.name}`;
+    let key = "";
+    if (path === "") {
+      key = `${session.user.id}/${file.name}`;
+    } else {
+      key = `${session.user.id}/${path}/${file.name}`;
+    }
 
     console.log("R2 업로드 시도:", {
       bucket: BUCKET_NAME,
@@ -85,6 +97,33 @@ export async function createFolderAction(targetFolderKey: string) {
 
   revalidatePath("/drive");
   return { success: true, fileName: targetFolderKey };
+}
+
+export async function deleteFolderAction(targetFolderKey: string) {
+  try {
+    console.log("deleteFolderAction", targetFolderKey);
+    await deleteFolderRecursive(targetFolderKey);
+  } catch (error) {
+    console.error("폴더 삭제 오류:", error);
+    return { success: false, fileName: targetFolderKey };
+  }
+
+  revalidatePath("/drive");
+  return { success: true, fileName: targetFolderKey };
+}
+
+export async function deleteFileAction(targetFileKey: string) {
+  try {
+    console.log("deleteFileAction", targetFileKey);
+    // targetFileKey는 이미 전체 key이므로 그대로 사용
+    await deleteFile(targetFileKey);
+  } catch (error) {
+    console.error("파일 삭제 오류:", error);
+    return { success: false, fileName: targetFileKey };
+  }
+
+  revalidatePath("/drive");
+  return { success: true, fileName: targetFileKey };
 }
 
 async function getSession() {

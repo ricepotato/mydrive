@@ -2,9 +2,11 @@
 
 import { createFolderAction } from "@/actions/actions";
 import { FolderPlus } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export function CreateFolderButtonContainer() {
+  const searchParams = useSearchParams();
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
   return (
@@ -54,7 +56,11 @@ export function CreateFolderButtonContainer() {
               </button>
               <button
                 onClick={() => {
-                  createFolderAction(folderName);
+                  const currentPath = searchParams.get("path");
+                  const newFolderKey = currentPath
+                    ? `${currentPath}/${folderName}`
+                    : folderName;
+                  createFolderAction(newFolderKey);
                   setShowCreateFolder(false);
                   setFolderName("");
                 }}

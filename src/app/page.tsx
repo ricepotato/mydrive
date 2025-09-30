@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { FileUpload } from "@/components/FileUpload";
-import { FileList } from "@/components/FileList";
+import { FileListView } from "@/components/FileList";
 import { FilePreview } from "@/components/FilePreview";
 import { Header } from "@/components/Header";
 import { Breadcrumb } from "@/components/Breadcrumb";
@@ -283,19 +283,7 @@ export default function Home() {
                 아직 파일이 없습니다. 파일을 업로드해보세요!
               </p>
             </div>
-          ) : (
-            <FileList
-              files={files}
-              onFileClick={handleFileClick}
-              onFileDelete={handleFileDelete}
-              formatFileSize={formatFileSize}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onDragEnd={handleDragEnd}
-              draggedItem={draggedItem}
-            />
-          )}
+          ) : null}
         </div>
       </main>
 
