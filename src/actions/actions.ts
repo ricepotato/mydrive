@@ -126,6 +126,10 @@ export async function deleteFileAction(targetFileKey: string) {
   return { success: true, fileName: targetFileKey };
 }
 
+export async function revalidatePathAction(path: string) {
+  revalidatePath(path);
+}
+
 async function getSession() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {

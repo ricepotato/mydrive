@@ -1,10 +1,10 @@
 "use client";
 
+import { revalidatePathAction } from "@/actions/actions";
+import { AlertCircle, Check, Upload, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, Check, X, AlertCircle } from "lucide-react";
-import { uploadFileAction } from "@/actions/actions";
-import { useSearchParams } from "next/navigation";
 
 interface UploadStatus {
   [key: string]: {
@@ -23,6 +23,7 @@ export function FileUploadContainer() {
 }
 
 export function FileUpload() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({});
@@ -39,12 +40,31 @@ export function FileUpload() {
     setUploadStatus(initialStatus);
 
     const submitUploadForm = async (file: File) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("path", searchParams.get("path") || "");
+      let key = "";
+      if (searchParams.get("path") === null) {
+        key = file.name;
+      } else {
+        key = `${searchParams.get("path") || ""}/${file.name}`;
+      }
+      const response = await fetch(`/api/v1/presignedUrl?key=${key}`);
+      if (response.status === 401) {
+        console.error("인증 실패");
+        router.push("/login");
+        return { success: false, fileName: file.name };
+      }
+      const data = await response.json();
 
-      console.log(`파일 업로드 시작: ${file.name}`);
-      return await uploadFileAction(formData);
+      const putResponse = await fetch(data.presignedUrl, {
+        method: "PUT",
+        body: file,
+      });
+
+      if (putResponse.status === 200) {
+        return { success: true, fileName: file.name };
+      } else {
+        console.error(`${file.name} 업로드 실패 status: ${putResponse.status}`);
+        return { success: false, fileName: file.name };
+      }
     };
 
     const uploadResults = await Promise.all(
@@ -59,6 +79,8 @@ export function FileUpload() {
         }));
       }
     });
+
+    await revalidatePathAction("/drive");
 
     setUploading(false);
 
