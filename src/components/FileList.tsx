@@ -212,7 +212,7 @@ export function FileList55({
               {file.isPreviewable && !file.isFolder && (
                 <button
                   onClick={() => onFileClick?.(file)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="p-2 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
                   title="미리보기"
                 >
                   <Eye className="w-4 h-4" />
@@ -222,7 +222,7 @@ export function FileList55({
               {!file.isFolder && (
                 <button
                   onClick={() => handleDownload?.(file.key, file.fileName)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  className="p-2 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
                   title="다운로드"
                 >
                   <Download className="w-4 h-4" />

@@ -84,12 +84,26 @@ export async function getFiles(prefix: string): Promise<FileItem[]> {
         ? fileName.substring(fileName.indexOf("-") + 1)
         : fileName;
 
+      const fileExtension = fileName.toLowerCase().split(".").pop();
+      const isPreviewable = [
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "webp",
+        "pdf",
+        "mp4",
+        "webm",
+        "mov",
+      ].includes(fileExtension || "");
+
       return {
         key,
         fileName: originalName,
         size: object.Size || 0,
         lastModified: object.LastModified,
         isFolder: false,
+        isPreviewable,
       };
     });
     return files;
