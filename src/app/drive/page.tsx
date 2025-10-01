@@ -7,6 +7,7 @@ import { getFiles } from "@/lib/r2";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { Breadcrumb } from "@/components/Breadcrumb";
 
 export default async function Page({
   searchParams,
@@ -23,6 +24,8 @@ export default async function Page({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FileUploadContainer />
           <CreateFolderButtonContainer />
+          <Breadcrumb />
+          <Seperator />
           <FileListContainer path={path} />
         </div>
       </main>
@@ -48,4 +51,8 @@ async function getSession() {
     redirect("/login");
   }
   return session;
+}
+
+function Seperator() {
+  return <div className="h-px bg-gray-200 my-4" />;
 }

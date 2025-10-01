@@ -1,34 +1,36 @@
 "use client";
 
 import { ChevronRight, ArrowLeft } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-interface BreadcrumbProps {
-  currentPath: string[];
-  onBreadcrumbClick: (index: number) => void;
-  onGoBack: () => void;
-}
-
-export function Breadcrumb({
-  currentPath,
-  onBreadcrumbClick,
-  onGoBack,
-}: BreadcrumbProps) {
+export function Breadcrumb() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const path = searchParams.get("path");
+  const currentPath = path ? path.split("/") : [];
+  console.log(currentPath);
   return (
-    <div className="flex items-center gap-2">
-      {currentPath.length > 0 && (
-        <button
-          onClick={onGoBack}
-          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-          title="뒤로가기"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-      )}
+    <div className="flex items-center gap-2 h-7">
+      <div className="flex justify-center items-center w-7">
+        {currentPath.length > 0 && (
+          <button
+            onClick={() => {
+              router.back();
+            }}
+            className="p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+            title="뒤로가기"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       <div className="flex items-center gap-1 text-sm text-gray-600">
         <button
-          onClick={() => onBreadcrumbClick(-1)}
-          className="hover:text-blue-600 transition-colors"
+          onClick={() => {
+            router.push("/drive");
+          }}
+          className="hover:text-blue-600 transition-colors cursor-pointer"
         >
           홈
         </button>
@@ -37,8 +39,16 @@ export function Breadcrumb({
           <div key={index} className="flex items-center gap-1">
             <ChevronRight className="w-4 h-4" />
             <button
-              onClick={() => onBreadcrumbClick(index)}
-              className="hover:text-blue-600 transition-colors"
+              onClick={() => {
+                router.push(
+                  `/drive?path=${currentPath.slice(0, index + 1).join("/")}`
+                );
+              }}
+              className={`hover:text-blue-600 transition-colors ${
+                index === currentPath.length - 1
+                  ? "text-blue-600 cursor-default"
+                  : "cursor-pointer"
+              }`}
             >
               {folder}
             </button>
