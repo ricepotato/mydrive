@@ -14,10 +14,15 @@ interface UploadStatus {
   };
 }
 
+interface UploadedFile extends File {
+  path: string;
+  relativePath: string;
+}
+
 export function FileUploadContainer() {
   return (
     <div className="mb-8">
-      <FileUpload />;
+      <FileUpload />
     </div>
   );
 }
@@ -28,7 +33,7 @@ export function FileUpload() {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({});
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: UploadedFile[]) => {
     setUploading(true);
     setUploadStatus({});
 
@@ -39,12 +44,16 @@ export function FileUpload() {
     });
     setUploadStatus(initialStatus);
 
-    const submitUploadForm = async (file: File) => {
+    const submitUploadForm = async (file: UploadedFile) => {
       let key = "";
       if (searchParams.get("path") === null) {
-        key = file.name;
+        // remove first '/' from path
+        key = file.path.replace(/^\/+/, "");
       } else {
-        key = `${searchParams.get("path") || ""}/${file.name}`;
+        key = `${searchParams.get("path") || ""}/${file.path.replace(
+          /^\/+/,
+          ""
+        )}`;
       }
       const response = await fetch(`/api/v1/presignedUrl?key=${key}`);
       if (response.status === 401) {

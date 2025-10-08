@@ -4,6 +4,7 @@ import {
   deleteFileAction,
   deleteFolderAction,
   moveFileAction,
+  moveFolderAction,
 } from "@/actions/actions";
 import { FileItem } from "@/lib/r2";
 import { useState } from "react";
@@ -61,10 +62,19 @@ export function FileListView({ files }: { files: FileItem[] }) {
         setDraggedItem(undefined);
       }
     }
+
+    // 폴더 드레그시
+    if (targetFolder && draggedItem.isFolder) {
+      console.log("moveFolder", targetFolder, draggedItem);
+      const result = await moveFolderAction(draggedItem.key, targetFolder);
+      if (result.success) {
+        setDraggedItem(undefined);
+      }
+    }
   };
 
   return (
-    <FileList55
+    <FileList
       files={files}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
@@ -77,10 +87,9 @@ export function FileListView({ files }: { files: FileItem[] }) {
   );
 }
 
-export function FileList55({
+export function FileList({
   files,
   onFileClick,
-  onFileDelete,
   onDragStart,
   onDragOver,
   onDrop,

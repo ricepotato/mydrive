@@ -133,9 +133,11 @@ export async function getFiles(prefix: string): Promise<FileItem[]> {
 }
 
 export async function moveFile(sourceKey: string, destinationKey: string) {
+  // CopySource는 URL 인코딩이 필요 (한글, 특수문자 처리)
+  const encodedSourceKey = encodeURIComponent(sourceKey);
   const command = new CopyObjectCommand({
     Bucket: BUCKET_NAME,
-    CopySource: `${BUCKET_NAME}/${sourceKey}`,
+    CopySource: `${BUCKET_NAME}/${encodedSourceKey}`,
     Key: destinationKey,
   });
   const copyResponse = await r2Client.send(command);
@@ -148,6 +150,19 @@ export async function moveFile(sourceKey: string, destinationKey: string) {
   const deleteResponse = await r2Client.send(deleteCommand);
   console.log(deleteResponse);
 
+  return true;
+}
+
+export async function copyFile(sourceKey: string, destinationKey: string) {
+  // CopySource는 URL 인코딩이 필요 (한글, 특수문자 처리)
+  const encodedSourceKey = encodeURIComponent(sourceKey);
+  const command = new CopyObjectCommand({
+    Bucket: BUCKET_NAME,
+    CopySource: `${BUCKET_NAME}/${encodedSourceKey}`,
+    Key: destinationKey,
+  });
+  const response = await r2Client.send(command);
+  console.log(response);
   return true;
 }
 
@@ -184,10 +199,69 @@ export async function deleteFolderRecursive(prefix: string) {
   console.log("deleteFolderRecursive", prefix);
   const result = await getFiles(`${prefix}/`);
   const files = result.filter((file) => file.isFolder === false);
-  console.log("deleteFolderRecursive files", files);
   const folders = result.filter((file) => file.isFolder === true);
   await Promise.all(files.map((file) => deleteFile(file.key)));
   await Promise.all(folders.map((folder) => deleteFolderRecursive(folder.key)));
   await deleteFile(`${prefix}/.folder`);
   return true;
+}
+
+export async function moveFolder(sourceKey: string, destinationKey: string) {
+  console.log("moveFolder", sourceKey, "->", destinationKey);
+
+  // 먼저 목적지에 폴더 생성
+  await createFolder(`${destinationKey}/.folder`);
+
+  // 소스 폴더의 내용 가져오기
+  const result = await getFiles(`${sourceKey}/`);
+  const files = result.filter((file) => file.isFolder === false);
+  const folders = result.filter((file) => file.isFolder === true);
+
+  if (files.length > 0) {
+    await Promise.all(
+      files.map((file) => {
+        /**
+         * sourceKey: /user/123/folder1
+         * destinationKey: /user/123/folder2
+         * newKey: /user/123/folder2/folder1
+         */
+        const src = file.key.split("/");
+        const lastComponent = src.pop();
+        const sourceFolder = src.pop();
+        const newKey = `${destinationKey}/${sourceFolder}/${lastComponent}`;
+
+        console.log(`파일 복사: ${file.key} -> ${newKey}`);
+        return copyFile(file.key, newKey);
+      })
+    );
+  }
+
+  // 폴더 이동: 재귀적으로 처리
+  if (folders.length > 0) {
+    await Promise.all(
+      folders.map((folder) => {
+        const relativePath = folder.key.replace(`${sourceKey}/`, "");
+        const newKey = `${destinationKey}/${relativePath}`;
+        console.log(`폴더 이동: ${folder.key} -> ${newKey}`);
+        //return moveFolder(folder.key, newKey);
+      })
+    );
+  }
+
+  // 원본 폴더 삭제
+  //await deleteFolderRecursive(sourceKey);
+  console.log(`deleteFolderRecursive ${sourceKey}`);
+  return true;
+}
+
+// 테스트용 파일 업로드 함수
+export async function uploadFile(key: string, content: string) {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Body: content,
+  });
+  const response = await r2Client.send(command);
+  console.log(`파일 업로드: ${key}`);
+  return response;
 }

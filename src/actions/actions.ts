@@ -4,20 +4,17 @@ import { authOptions } from "@/lib/auth";
 import {
   BUCKET_NAME,
   FileItem,
-  r2Client,
-  moveFile,
   createFolder,
-  deleteFolderRecursive,
   deleteFile,
+  deleteFolderRecursive,
+  moveFile,
+  r2Client,
+  moveFolder,
 } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import {
-  getSignedUrl,
-  S3RequestPresigner,
-} from "@aws-sdk/s3-request-presigner";
 
 export async function uploadFileAction(formData: FormData) {
   let file: File | undefined = undefined;
@@ -83,6 +80,22 @@ export async function moveFileAction(targetFolderKey: string, file: FileItem) {
     console.error("파일 이동 오류:", error);
     return { success: false, fileName: file.fileName };
   }
+}
+
+export async function moveFolderAction(
+  sourceKey: string,
+  destinationFolder: string
+) {
+  try {
+    const session = await getSession();
+    await moveFolder(sourceKey, `${session.user.id}/${destinationFolder}`);
+  } catch (error) {
+    console.error("폴더 이동 오류:", error);
+    return { success: false, fileName: sourceKey };
+  }
+
+  revalidatePath("/drive");
+  return { success: true, fileName: sourceKey };
 }
 
 export async function createFolderAction(targetFolderKey: string) {
