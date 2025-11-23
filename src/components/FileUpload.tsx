@@ -4,7 +4,12 @@ import { revalidatePathAction } from "@/actions/actions";
 import { AlertCircle, Check, Upload, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import {
+  useDropzone,
+  FileWithPath,
+  FileRejection,
+  DropEvent,
+} from "react-dropzone";
 
 interface UploadStatus {
   [key: string]: {
@@ -12,11 +17,6 @@ interface UploadStatus {
     status: "uploading" | "success" | "error";
     error?: string;
   };
-}
-
-interface UploadedFile extends File {
-  path: string;
-  relativePath: string;
 }
 
 export function FileUploadContainer() {
@@ -33,76 +33,94 @@ export function FileUpload() {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({});
 
-  const onDrop = useCallback(async (acceptedFiles: UploadedFile[]) => {
-    setUploading(true);
-    setUploadStatus({});
-
-    // 초기 상태 설정
-    const initialStatus: UploadStatus = {};
-    acceptedFiles.forEach((file) => {
-      initialStatus[file.name] = { progress: 0, status: "uploading" };
-    });
-    setUploadStatus(initialStatus);
-
-    const submitUploadForm = async (file: UploadedFile) => {
-      let key = "";
-      if (searchParams.get("path") === null) {
-        // remove first '/' from path
-        key = file.path.replace(/^\/+/, "");
-      } else {
-        key = `${searchParams.get("path") || ""}/${file.path.replace(
-          /^\/+/,
-          ""
-        )}`;
+  const onDrop = useCallback(
+    async (
+      acceptedFiles: FileWithPath[],
+      fileRejections: FileRejection[],
+      event: DropEvent
+    ) => {
+      // Handle rejected files if any
+      if (fileRejections.length > 0) {
+        console.warn("Some files were rejected:", fileRejections);
       }
-      const response = await fetch(`/api/v1/presignedUrl?key=${key}`);
-      if (response.status === 401) {
-        console.error("인증 실패");
-        router.push("/login");
-        return { success: false, fileName: file.name };
-      }
-      const data = await response.json();
+      // Event is available but not used in current implementation
+      void event;
 
-      const putResponse = await fetch(data.presignedUrl, {
-        method: "PUT",
-        body: file,
+      setUploading(true);
+      setUploadStatus({});
+
+      // 초기 상태 설정
+      const initialStatus: UploadStatus = {};
+      acceptedFiles.forEach((file) => {
+        initialStatus[file.name] = { progress: 0, status: "uploading" };
+      });
+      setUploadStatus(initialStatus);
+
+      const submitUploadForm = async (file: FileWithPath) => {
+        let key = "";
+        if (searchParams.get("path") === null) {
+          // remove first '/' from path
+          key = (file.path || file.name).replace(/^\/+/, "");
+        } else {
+          key = `${searchParams.get("path") || ""}/${file.name.replace(
+            /^\/+/,
+            ""
+          )}`;
+        }
+        const response = await fetch(`/api/v1/presignedUrl?key=${key}`);
+        if (response.status === 401) {
+          console.error("인증 실패");
+          router.push("/login");
+          return { success: false, fileName: file.name };
+        }
+        const data = await response.json();
+
+        const putResponse = await fetch(data.presignedUrl, {
+          method: "PUT",
+          body: file,
+        });
+
+        if (putResponse.status === 200) {
+          return { success: true, fileName: file.name };
+        } else {
+          console.error(
+            `${file.name} 업로드 실패 status: ${putResponse.status}`
+          );
+          return { success: false, fileName: file.name };
+        }
+      };
+
+      console.log(acceptedFiles);
+
+      const uploadResults = await Promise.all(
+        acceptedFiles.map((file) => submitUploadForm(file))
+      );
+
+      uploadResults.forEach((result) => {
+        if (result.success) {
+          setUploadStatus((prev) => ({
+            ...prev,
+            [result.fileName]: { progress: 100, status: "success" },
+          }));
+        }
       });
 
-      if (putResponse.status === 200) {
-        return { success: true, fileName: file.name };
-      } else {
-        console.error(`${file.name} 업로드 실패 status: ${putResponse.status}`);
-        return { success: false, fileName: file.name };
-      }
-    };
+      await revalidatePathAction("/drive");
 
-    const uploadResults = await Promise.all(
-      acceptedFiles.map((file) => submitUploadForm(file))
-    );
+      setUploading(false);
 
-    uploadResults.forEach((result) => {
-      if (result.success) {
-        setUploadStatus((prev) => ({
-          ...prev,
-          [result.fileName]: { progress: 100, status: "success" },
-        }));
-      }
-    });
-
-    await revalidatePathAction("/drive");
-
-    setUploading(false);
-
-    // 5초 후 상태 초기화
-    setTimeout(() => {
-      setUploadStatus({});
-    }, 5000);
-  }, []);
+      // 5초 후 상태 초기화
+      setTimeout(() => {
+        setUploadStatus({});
+      }, 5000);
+    },
+    [router, searchParams]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
-    maxSize: 100 * 1024 * 1024, // 100MB 제한
+    maxSize: 200 * 1024 * 1024, // 200MB 제한
   });
 
   const getStatusIcon = (status: string) => {
@@ -145,7 +163,7 @@ export function FileUpload() {
           <p className="text-blue-600 font-medium">파일을 여기에 놓으세요</p>
         ) : (
           <div>
-            <p className="text-gray-600 font-medium mb-2">
+            <p className="text-gray-600 font-bold mb-2">
               파일을 드래그하거나 클릭하여 업로드
             </p>
             <p className="text-sm text-gray-500">
